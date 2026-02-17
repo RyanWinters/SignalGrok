@@ -35,3 +35,10 @@ def test_request_id_propagated_and_logged(capfd) -> None:
 
     assert request_logs
     assert any(log.get("request_id") == "req-smoke-123" for log in request_logs)
+
+
+def test_database_health() -> None:
+    with TestClient(create_app()) as client:
+        response = client.get("/health/database")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}

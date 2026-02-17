@@ -1,0 +1,68 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      ENV: dev
+      LOG_LEVEL: INFO
+      SIGNALGROK_WEBHOOK_KEY: test-webhook-key
+      DATABASE_URL: postgresql+psycopg://signalgrok:signalgrok@postgres:5432/signalgrok
+      OPENAI_API_KEY: test-openai-key
+      FINNHUB_API_KEY: test-finnhub-key
+      DISCORD_WEBHOOK_URL: https://discord.example/webhook
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: signalgrok
+      POSTGRES_PASSWORD: signalgrok
+      POSTGRES_DB: signalgrok
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles:
+      - test
+    environment:
+      ENV: dev
+      LOG_LEVEL: INFO
+      SIGNALGROK_WEBHOOK_KEY: test-webhook-key
+      DATABASE_URL: postgresql+psycopg://signalgrok:signalgrok@postgres:5432/signalgrok
+      OPENAI_API_KEY: test-openai-key
+      FINNHUB_API_KEY: test-finnhub-key
+      DISCORD_WEBHOOK_URL: https://discord.example/webhook
+    depends_on:
+      api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command: pytest tests/integration -q
+
+volumes:
+  postgres_data:

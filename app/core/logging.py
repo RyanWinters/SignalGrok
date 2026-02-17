@@ -2,12 +2,12 @@
 
 import logging
 
-from app.core.config import get_settings
+from app.core.config import Settings
 
 
-def configure_logging() -> None:
-    settings = get_settings()
+def configure_logging(settings: Settings) -> None:
+    level = "DEBUG" if settings.is_dev else settings.LOG_LEVEL.upper()
     logging.basicConfig(
-        level=settings.log_level.upper(),
+        level=level,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )

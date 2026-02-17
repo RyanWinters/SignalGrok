@@ -1,0 +1,17 @@
+.git
+.gitignore
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+.env
+.venv
+venv
+htmlcov
+.coverage
+.DS_Store

@@ -1,5 +1,6 @@
 """Webhook routes."""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -9,6 +10,7 @@ from app.schemas.alerts import AlertAckResponse, AlertPayload
 from app.services.alerts import normalize_ticker
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/trading-alert", response_model=AlertAckResponse)
@@ -26,6 +28,9 @@ def receive_trading_alert(
         )
 
     ticker = normalize_ticker(payload.ticker)
-    print(f"[SignalGrok] Received ticker: {ticker}")
+    logger.info(
+        "webhook_alert_received",
+        extra={"route": "/webhooks/trading-alert", "method": "POST", "status": 200},
+    )
 
     return AlertAckResponse(status="accepted", ticker=ticker)

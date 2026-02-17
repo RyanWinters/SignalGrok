@@ -94,6 +94,8 @@
 4. Persist raw alerts to `incoming_alerts`.
 5. Write unit and integration tests for success + auth failures.
 
+Detailed Epic B execution checklist: `docs/EPIC_B_TASKS.md`.
+
 ### Epic C — Market News Integration (Finnhub)
 1. Build Finnhub client with retries/timeouts.
 2. Create news normalization and deduplication logic.

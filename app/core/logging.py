@@ -55,6 +55,12 @@ class JsonFormatter(logging.Formatter):
             payload["duration_ms"] = round(float(record.duration_ms), 2)
         if hasattr(record, "headers"):
             payload["headers"] = record.headers
+        if hasattr(record, "outcome"):
+            payload["outcome"] = record.outcome
+        if hasattr(record, "ticker"):
+            payload["ticker"] = record.ticker
+        if hasattr(record, "signal_type"):
+            payload["signal_type"] = record.signal_type
 
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)

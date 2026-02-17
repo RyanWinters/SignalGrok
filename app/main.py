@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes.health import router as health_router
 from app.api.routes.webhooks import router as webhooks_router
 from app.core.config import get_settings
+from app.core.db import init_db
 from app.core.logging import (
     configure_logging,
     reset_request_id,
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     configure_logging(settings)
+    init_db(settings.DATABASE_URL)
     yield
 
 

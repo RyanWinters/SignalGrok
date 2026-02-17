@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 from typing import Literal
+from uuid import UUID
 
 from fastapi import Request
 from pydantic import SecretStr, field_validator
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     ENV: Environment
     LOG_LEVEL: str
     SIGNALGROK_WEBHOOK_KEY: SecretStr
+    WEBHOOK_ENDPOINT_ID: UUID = UUID("00000000-0000-0000-0000-000000000001")
     DATABASE_URL: str
     OPENAI_API_KEY: SecretStr
     FINNHUB_API_KEY: SecretStr

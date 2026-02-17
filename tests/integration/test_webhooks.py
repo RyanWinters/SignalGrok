@@ -2,8 +2,12 @@ import json
 import re
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.main import create_app
+from app.models import incoming_alerts
+from app.core.config import get_settings
+from app.core.db import get_engine
 
 
 def test_health() -> None:
@@ -11,6 +15,99 @@ def test_health() -> None:
         response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_authenticated_intake_persists_and_returns_normalized_payload() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/webhooks/trading-alert",
+            headers={"X-SignalGrok-Key": "test-webhook-key"},
+            json={
+                "alert_id": "tv-1001",
+                "signal": "SPY MACD Crossover",
+                "ticker": " spy ",
+                "direction": "buy",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "accepted",
+        "ticker": "SPY",
+        "signal_type": "SPY_MACD_CROSSOVER",
+        "duplicate": False,
+    }
+
+    settings = get_settings()
+    engine = get_engine(settings.DATABASE_URL)
+    with engine.connect() as connection:
+        rows = connection.execute(select(incoming_alerts)).mappings().all()
+
+    assert len(rows) == 1
+    saved = rows[0]
+    assert saved["external_alert_id"] == "tv-1001"
+    assert saved["ticker"] == "SPY"
+    assert saved["signal_type"] == "SPY_MACD_CROSSOVER"
+    assert saved["direction"] == "BULLISH"
+    assert saved["status"] == "RECEIVED"
+
+
+def test_invalid_key_returns_401() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/webhooks/trading-alert",
+            headers={"X-SignalGrok-Key": "wrong"},
+            json={
+                "signal": "SPY MACD Crossover",
+                "ticker": "SPY",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized"}
+
+
+def test_duplicate_alert_is_idempotent() -> None:
+    payload = {
+        "alert_id": "tv-dup-1",
+        "signal": "SPY MACD Crossover",
+        "ticker": "SPY",
+    }
+
+    with TestClient(create_app()) as client:
+        first = client.post(
+            "/webhooks/trading-alert",
+            headers={"X-SignalGrok-Key": "test-webhook-key"},
+            json=payload,
+        )
+        second = client.post(
+            "/webhooks/trading-alert",
+            headers={"X-SignalGrok-Key": "test-webhook-key"},
+            json=payload,
+        )
+
+    assert first.status_code == 200
+    assert first.json()["duplicate"] is False
+    assert second.status_code == 200
+    assert second.json()["duplicate"] is True
+
+    settings = get_settings()
+    engine = get_engine(settings.DATABASE_URL)
+    with engine.connect() as connection:
+        rows = connection.execute(select(incoming_alerts)).mappings().all()
+
+    assert len(rows) == 1
+
+
+def test_malformed_payload_returns_422() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/webhooks/trading-alert",
+            headers={"X-SignalGrok-Key": "test-webhook-key"},
+            json={"signal": "SPY MACD Crossover"},
+        )
+
+    assert response.status_code == 422
 
 
 def test_request_id_propagated_and_logged(capfd) -> None:

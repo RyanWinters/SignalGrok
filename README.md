@@ -53,3 +53,35 @@ docker compose --profile test run --rm integration-tests
 ```bash
 pytest
 ```
+
+
+## Webhook contract (`POST /webhooks/trading-alert`)
+
+Required header:
+- `X-SignalGrok-Key`: must match `SIGNALGROK_WEBHOOK_KEY`
+
+Sample payload:
+
+```json
+{
+  "alert_id": "tv-1001",
+  "signal": "SPY MACD Crossover",
+  "ticker": "spy",
+  "direction": "buy",
+  "timeframe": "5m",
+  "timestamp": "2025-01-02T03:04:05Z"
+}
+```
+
+Successful response:
+
+```json
+{
+  "status": "accepted",
+  "ticker": "SPY",
+  "signal_type": "SPY_MACD_CROSSOVER",
+  "duplicate": false
+}
+```
+
+Duplicate requests with the same `alert_id` for the configured endpoint are acknowledged with `duplicate: true` and are not inserted twice.
